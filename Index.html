@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Iron Foundry Charge Calculator</title>
+<link rel="manifest" href="manifest.json" />
+<style>
+:root{
+  --bg:#f2f0eb;--surface:#fff;--surface2:#f7f6f3;--border:#d8d4cc;
+  --divider:#e6e3dd;--text:#1a1814;--muted:#6e6b63;--faint:#aaa89f;
+  --primary:#005f66;--primary-lt:#e3f2f3;--primary-hv:#004a50;
+  --success:#276b08;--success-bg:#eaf5e3;
+  --warn:#7a3400;--warn-bg:#fff1e3;
+  --error:#8a0030;--error-bg:#fce8ef;
+  --req:#b83228;--req-bg:#fff5f4;--req-bdr:#e8b0a8;
+  --shadow:0 2px 10px rgba(0,0,0,.07);--r:12px;--rsm:7px;
+}
+[data-theme="dark"]{
+  --bg:#141310;--surface:#1b1a16;--surface2:#201f1b;--border:#353328;
+  --divider:#2a2925;--text:#ccc9c1;--muted:#9a9790;--faint:#646158;
+  --primary:#3a98a6;--primary-lt:#0d2e32;--primary-hv:#58b5c3;
+  --success:#5aab2e;--success-bg:#182e10;
+  --warn:#d4783a;--warn-bg:#2e1c08;
+  --error:#d44070;--error-bg:#2e0a18;
+  --req:#e05040;--req-bg:#2e1208;--req-bdr:#6a2820;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:15px;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;}
+button,input,select{font:inherit;color:inherit;}
+.shell{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 18px;
+  background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-icon{width:38px;height:38px;flex-shrink:0;}
+.brand-title{font-weight:800;font-size:1.1rem;text-transform:uppercase;letter-spacing:0.05em;font-family:"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;}
+.spacer{flex:1;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+
+/* TABS */
+.tabs{display:flex;background:var(--surface2);padding:0 18px;
+  border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;}
+.tab{padding:11px 22px;font-size:0.85rem;font-weight:600;cursor:pointer;
+  border:none;background:transparent;color:var(--muted);
+  border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap;}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary);background:var(--surface);}
+.tab:hover:not(.active){color:var(--text);}
+
+/* PAGES */
+.pages{flex:1;overflow:hidden;}
+.page{display:none;height:100%;overflow-y:auto;padding:16px;}
+.page.active{display:block;}
+
+/* BUTTONS */
+.btn{padding:8px 14px;border:1px solid var(--border);background:var(--surface);
+  border-radius:var(--rsm);font-size:0.83rem;cursor:pointer;font-weight:600;
+  color:var(--text);min-height:38px;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;}
+.btn-primary:hover{background:var(--primary-hv);}
+
+/* MODE TOGGLE */
+.mode-toggle{display:flex;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--rsm);overflow:hidden;}
+.mode-btn{padding:7px 22px;cursor:pointer;font-weight:700;font-size:0.83rem;
+  border:none;background:transparent;color:var(--muted);transition:all .15s;flex:1;text-align:center;}
+.mode-btn.active{background:var(--primary);color:#fff;}
+
+/* DASHBOARD LAYOUT */
+.dash{display:grid;grid-template-columns:330px 1fr;gap:14px;}
+.col-l,.col-r{display:flex;flex-direction:column;gap:12px;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;}
+.card-head{padding:10px 14px;border-bottom:1px solid var(--divider);
+  background:var(--surface2);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cstep{width:22px;height:22px;border-radius:50%;background:var(--primary);
+  color:#fff;font-size:0.7rem;font-weight:800;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;}
+.ctitle{font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.05em;}
+.ctag{font-size:0.68rem;padding:2px 9px;border-radius:20px;font-weight:700;margin-left:auto;}
+.tag-start{background:var(--primary-lt);color:var(--primary);}
+.tag-trim{background:var(--warn-bg);color:var(--warn);}
+.tag-charge{background:var(--primary-lt);color:var(--primary);}
+.card-body{padding:14px;}
+
+/* FORM */
+.fg{display:grid;gap:9px;}
+.fg-2{grid-template-columns:1fr 1fr;}
+.field{display:flex;flex-direction:column;gap:3px;}
+.field label{font-size:0.72rem;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:4px;}
+.rs{color:var(--req);font-size:0.9rem;}
+.field input,.field select{
+  padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--rsm);
+  background:var(--bg);color:var(--text);font-size:0.9rem;min-height:40px;width:100%;
+  transition:border-color .15s,box-shadow .15s;}
+.field input:focus,.field select:focus{
+  outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-lt);}
+.field.req input,.field.req select{background:var(--req-bg);border-color:var(--req-bdr);}
+
+/* LEGEND */
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:0.74rem;color:var(--muted);
+  padding:8px 12px;background:var(--surface2);border:1px solid var(--divider);
+  border-radius:var(--rsm);align-items:center;}
+.ldot{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:3px;}
+
+/* INFO BOX */
+.info-box{background:var(--primary-lt);border:1px solid #9dd0d5;border-radius:var(--rsm);
+  padding:9px 12px;font-size:0.78rem;color:var(--primary);line-height:1.6;}
+.warn-box{background:var(--warn-bg);border:1px solid var(--warn);border-radius:var(--rsm);
+  padding:9px 12px;font-size:0.78rem;color:var(--warn);line-height:1.6;}
+
+/* TABLES */
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+th{padding:9px 12px;font-size:0.69rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--muted);border-bottom:2px solid var(--divider);
+  background:var(--surface2);white-space:nowrap;}
+td{padding:9px 12px;border-bottom:1px solid var(--divider);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+
+/* SECTION HEADER ROWS */
+.section-row td{
+  background:var(--primary-lt) !important;
+  font-size:0.71rem;font-weight:800;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--primary);padding:5px 12px;
+  border-top:2px solid #9dd0d5;border-bottom:1px solid #9dd0d5;}
+.section-row-ladle td{
+  background:var(--warn-bg) !important;
+  font-size:0.71rem;font-weight:800;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--warn);padding:5px 12px;
+  border-top:2px solid var(--warn);border-bottom:1px solid var(--warn);}
+
+/* MATERIAL ROWS */
+.mat-name{font-weight:600;}
+.kg-val{font-size:1.0rem;font-weight:900;font-variant-numeric:tabular-nums;}
+.zero{color:var(--faint);}
+.cost-val{font-weight:700;}
+.note-txt{font-size:0.78rem;color:var(--muted);}
+.when-badge{display:inline-block;font-size:0.71rem;font-weight:700;
+  padding:2px 9px;border-radius:20px;white-space:nowrap;}
+.when-furnace{background:var(--surface2);border:1px solid var(--border);color:var(--muted);}
+.when-ladle{background:var(--primary-lt);border:1px solid #9dd0d5;color:var(--primary);}
+.when-operator{background:var(--warn-bg);border:1px solid var(--warn);color:var(--warn);}
+
+/* MANUAL INPUT & OVERRIDES */
+.manual-row td{background:var(--warn-bg) !important;}
+.manual-row:hover td{filter:brightness(0.97);}
+.manual-input{width:90px;padding:5px 8px;border:1.5px solid var(--warn);
+  border-radius:var(--rsm);background:var(--surface);color:var(--text);
+  font-size:0.9rem;font-weight:700;text-align:center;}
+.manual-input:focus{outline:none;border-color:var(--primary);}
+
+.steel-override{width:100px;padding:5px 8px;border:1.5px dashed var(--border);
+  border-radius:var(--rsm);background:var(--bg);color:var(--muted);
+  font-size:0.85rem;font-weight:700;text-align:center;}
+.steel-override:focus{outline:none;border-color:var(--primary);color:var(--text);background:var(--surface);}
+.steel-override.overridden{border-color:var(--primary);color:var(--text);background:var(--primary-lt);border-style:solid;}
+
+/* TOTAL ROW */
+.total-row td{font-weight:700;background:var(--surface2) !important;
+  border-top:2px solid var(--divider);}
+.total-cost{color:var(--primary);font-size:1.05rem;font-weight:900;}
+.row-ce td{background:var(--surface2) !important; font-weight:700; border-top:1px solid var(--border);}
+
+/* NLA DIFF COLORING */
+.diff-ok{color:var(--success);font-weight:700;}
+.diff-warn{color:var(--warn);font-weight:700;}
+.diff-bad{color:var(--error);font-weight:700;}
+
+/* METRICS */
+.metrics-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;}
+.metric{background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r);padding:11px 14px;}
+.metric-lbl{font-size:0.68rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--muted);margin-bottom:3px;}
+.metric-val{font-size:1.2rem;font-weight:900;font-variant-numeric:tabular-nums;}
+.metric-sub{font-size:0.71rem;color:var(--faint);margin-top:2px;}
+
+/* ALLOY / GRADE / SETTINGS PAGES */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.scard{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;}
+.shead{padding:10px 14px;background:var(--surface2);
+  border-bottom:1px solid var(--divider);font-weight:700;font-size:0.85rem;}
+.sbody{padding:14px;display:flex;flex-direction:column;gap:10px;}
+.fbox{background:var(--surface2);border:1px dashed var(--divider);
+  border-radius:var(--rsm);padding:12px 14px;font-size:0.8rem;line-height:2;}
+.fbox code{background:var(--bg);border:1px solid var(--border);
+  padding:1px 5px;border-radius:4px;font-family:monospace;font-size:.82em;}
+
+/* TABLE INPUTS FOR LIBRARIES */
+.alloys-tbl td input, .gtbl td input {
+  width:100%;min-width:60px;padding:5px 6px;border:1px solid var(--border);
+  border-radius:4px;background:var(--bg);color:var(--text);font-size:0.8rem;text-align:center;}
+.alloys-tbl td input:focus, .gtbl td input:focus {outline:none;border-color:var(--primary);background:var(--surface);}
+.alloys-tbl td:first-child input, .gtbl td:first-child input {font-weight:700;min-width:140px;text-align:left;}
+
+.alloys-tbl th,.alloys-tbl td, .gtbl th, .gtbl td {padding:6px 8px;font-size:0.8rem;}
+.pg-title{font-size:1rem;font-weight:800;margin-bottom:14px;}
+.howto{max-width:720px;display:flex;flex-direction:column;gap:14px;}
+
+@media(max-width:1100px){.dash{grid-template-columns:1fr;}.metrics-strip{grid-template-columns:1fr 1fr;}}
+@media(max-width:640px){.fg-2,.sgrid{grid-template-columns:1fr;}.metrics-strip{grid-template-columns:1fr 1fr;}}
+
+/* ═══════════════════════════ PRINT / PDF STYLES ═══════════════════════════ */
+@media print {
+  .topbar-right, .tabs, .mode-toggle { display: none !important; }
+  body, .shell, .page, .card, .shead { background: white !important; color: black !important; }
+  .shell, .pages, .page { height: auto !important; overflow: visible !important; display: block !important; }
+  #page-alloys, #page-grades, #page-settings, #page-howto, #page-history { display: none !important; }
+  .dash { display: block; }
+  .col-l, .col-r { width: 100%; margin-bottom: 20px; }
+  .card { box-shadow: none; border: 1.5px solid #ccc; break-inside: avoid; margin-bottom: 15px; }
+  input, select { border: none !important; background: transparent !important; padding: 0 !important; font-weight: bold; }
+  .manual-input, .steel-override { border: none !important; background: transparent !important; }
+}
+</style>
+</head>
+<body>
+<!-- Custom Modal for Alerts/Confirms -->
+<div id="customModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; padding: 20px;">
+  <div style="background:var(--surface); padding:24px; border-radius:var(--r); box-shadow:var(--shadow); max-width:400px; width:100%; border:1px solid var(--border);">
+    <div id="modalText" style="margin-bottom:20px; font-weight:600; line-height:1.5; color:var(--text);">Are you sure?</div>
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button class="btn" id="modalBtnCancel" onclick="closeModal(false)">Cancel</button>
+      <button class="btn btn-primary" id="modalBtnConfirm" onclick="closeModal(true)" style="background:var(--error); border-color:transparent;">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="shell">
+
+<div class="topbar">
+  <div class="brand">
+    <svg class="brand-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="12" fill="#005f66"/>
+      <path d="M12 22 Q12 14 20 14 L44 14 Q52 14 52 22 L48 44 Q48 50 40 50 L24 50 Q16 50 16 44 Z" fill="#e8a020" stroke="#c07800" stroke-width="1.5"/>
+      <ellipse cx="32" cy="24" rx="16" ry="5" fill="#ffd060"/>
+      <path d="M28 50 Q26 56 24 60" stroke="#ffd060" stroke-width="3" stroke-linecap="round"/>
+      <path d="M36 50 Q37 56 36 60" stroke="#e8a020" stroke-width="2.5" stroke-linecap="round"/>
+      <rect x="18" y="58" width="28" height="5" rx="2" fill="#8ab4b8" opacity="0.7"/>
+    </svg>
+    <div class="brand-title">Iron Foundry Charge Calculator</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="topbar-right">
+    <button class="btn" id="themeBtn" onclick="toggleTheme()">Dark</button>
+    <button class="btn btn-primary" onclick="exportExcel()">⬇ Excel</button>
+    <button class="btn btn-primary" onclick="window.print()">🖨 PDF</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab-dashboard" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button class="tab" id="tab-history"  onclick="showTab('history',this)">Melt History</button>
+  <button class="tab" id="tab-alloys"   onclick="showTab('alloys',this)">Alloy Library</button>
+  <button class="tab" id="tab-grades"   onclick="showTab('grades',this)">Grade Library</button>
+  <button class="tab" id="tab-settings" onclick="showTab('settings',this)">Settings</button>
+  <button class="tab" id="tab-howto"    onclick="showTab('howto',this)">How to Use</button>
+</div>
+
+<div class="pages">
+
+<div class="page active" id="page-dashboard">
+<div class="dash">
+
+  <div class="col-l">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="cstep">1</div>
+        <div class="ctitle">Mode &amp; Target Plan</div>
+        <span class="ctag tag-start">Start Here</span>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:600;margin-bottom:6px;">CALCULATION MODE</div>
+          <div class="mode-toggle" style="width:100%;">
+            <button class="mode-btn active" id="modeCharge" onclick="setMode('CHARGE')">CHARGE MODE</button>
+            <button class="mode-btn"        id="modeTrim"   onclick="setMode('TRIM')">TRIM MODE</button>
+          </div>
+        </div>
+        <div id="modeInfo" class="info-box">
+          <strong>CHARGE MODE:</strong> Plan the heat. Calculates full Furnace Additions + planned Ladle Additions upfront.
+        </div>
+        <div class="fg fg-2">
+          <div class="field req">
+            <label><span class="rs">*</span> Target Grade</label>
+            <select id="grade" onchange="loadGrade(this.value)"></select>
+          </div>
+          <div class="field req">
+            <label><span class="rs">*</span> Target Heat Weight (kg)</label>
+            <input type="number" id="heatWeight" value="1400" min="1" oninput="syncBathWeight(); recalc()"/>
+          </div>
+        </div>
+        <div class="fg fg-2">
+          <div class="field">
+             <label>Heat Number (Optional)</label>
+             <input type="text" id="heatNumber" placeholder="e.g. 24-001" oninput="recalc()"/>
+          </div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--muted);font-weight:600;">GRADE TARGETS</div>
+        <div id="gradeTargetBox" style="font-size:0.78rem;line-height:1.9;
+          background:var(--surface2);border:1px solid var(--divider);
+          border-radius:var(--rsm);padding:8px 12px;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="cstep">2</div>
+        <div class="ctitle" id="step2Title">Charge Analysis</div>
+        <span class="ctag tag-charge" id="meltTag">Charge</span>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
+        <div id="step2Info" class="info-box" style="font-size:0.74rem;">
+          Select Returns grade from library or enter custom chemistry below. If none, leave weight at 0.
+        </div>
+        
+        <div id="chargeExtraFields">
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-top:4px;">PRIMARY RETURN</div>
+          <div class="fg fg-2">
+            <div class="field">
+              <select id="returnGrade" onchange="loadReturn1()"></select>
+            </div>
+            <div class="field">
+              <input type="number" id="returnKg" value="0" min="0" placeholder="Weight (kg)" oninput="recalc()"/>
+            </div>
+          </div>
+          <div class="fg" style="grid-template-columns:repeat(3,1fr);margin-top:6px;">
+            <div class="field"><label>C %</label><input type="number" id="r1C" step="0.01" value="0.00" oninput="markCustom1(); recalc()"/></div>
+            <div class="field"><label>Si %</label><input type="number" id="r1Si" step="0.01" value="0.00" oninput="markCustom1(); recalc()"/></div>
+            <div class="field"><label>Mn %</label><input type="number" id="r1Mn" step="0.01" value="0.00" oninput="markCustom1(); recalc()"/></div>
+            <div class="field"><label>P %</label><input type="number" id="r1P" step="0.001" value="0.000" oninput="markCustom1(); recalc()"/></div>
+            <div class="field"><label>Mo %</label><input type="number" id="r1Mo" step="0.001" value="0.000" oninput="markCustom1(); recalc()"/></div>
+            <div class="field"><label>Cu %</label><input type="number" id="r1Cu" step="0.001" value="0.000" oninput="markCustom1(); recalc()"/></div>
+          </div>
+
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-top:16px;">SECONDARY RETURN</div>
+          <div class="fg fg-2">
+            <div class="field">
+              <select id="returnGrade2" onchange="loadReturn2()"></select>
+            </div>
+            <div class="field">
+              <input type="number" id="returnKg2" value="0" min="0" placeholder="Weight (kg)" oninput="recalc()"/>
+            </div>
+          </div>
+          <div class="fg" style="grid-template-columns:repeat(3,1fr);margin-top:6px;">
+            <div class="field"><label>C %</label><input type="number" id="r2C" step="0.01" value="0.00" oninput="markCustom2(); recalc()"/></div>
+            <div class="field"><label>Si %</label><input type="number" id="r2Si" step="0.01" value="0.00" oninput="markCustom2(); recalc()"/></div>
+            <div class="field"><label>Mn %</label><input type="number" id="r2Mn" step="0.01" value="0.00" oninput="markCustom2(); recalc()"/></div>
+            <div class="field"><label>P %</label><input type="number" id="r2P" step="0.001" value="0.000" oninput="markCustom2(); recalc()"/></div>
+            <div class="field"><label>Mo %</label><input type="number" id="r2Mo" step="0.001" value="0.000" oninput="markCustom2(); recalc()"/></div>
+            <div class="field"><label>Cu %</label><input type="number" id="r2Cu" step="0.001" value="0.000" oninput="markCustom2(); recalc()"/></div>
+          </div>
+
+          <div style="font-size:0.72rem;color:var(--primary);font-weight:700;margin-top:16px;">COMBINED RETURNS CHEMISTRY (CALCULATED)</div>
+          <div id="combinedReturnsBox" style="font-size:0.8rem;line-height:1.8;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--rsm);padding:8px 12px;">
+            C: <b>0.00%</b> | Si: <b>0.00%</b> | Mn: <b>0.00%</b><br>
+            P: <b>0.000%</b> | Mo: <b>0.000%</b> | Cu: <b>0.000%</b>
+          </div>
+        </div>
+
+        <div id="trimModeFields" style="display:none;">
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-top:4px;">BATH ANALYSIS (SPECTROMETER)</div>
+          <div class="fg fg-2">
+            <div class="field req">
+              <label><span class="rs">*</span> Actual Bath Wt (kg)</label>
+              <input type="number" id="bathWeight" value="1400" min="1" oninput="this.dataset.touched='true'; recalc()"/>
+            </div>
+          </div>
+          <div class="fg" style="grid-template-columns:repeat(3,1fr); margin-top:12px;">
+            <div class="field req"><label><span class="rs">*</span> C %</label><input type="number" id="trimC" step="0.01" value="0.00" oninput="recalc()"/></div>
+            <div class="field req"><label><span class="rs">*</span> Si %</label><input type="number" id="trimSi" step="0.01" value="0.00" oninput="recalc()"/></div>
+            <div class="field req"><label><span class="rs">*</span> Mn %</label><input type="number" id="trimMn" step="0.01" value="0.00" oninput="recalc()"/></div>
+            <div class="field req"><label><span class="rs">*</span> P %</label><input type="number" id="trimP" step="0.001" value="0.000" oninput="recalc()"/></div>
+            <div class="field req"><label><span class="rs">*</span> Mo %</label><input type="number" id="trimMo" step="0.001" value="0.000" oninput="recalc()"/></div>
+            <div class="field req"><label><span class="rs">*</span> Cu %</label><input type="number" id="trimCu" step="0.001" value="0.000" oninput="recalc()"/></div>
+          </div>
+          <div class="fg fg-2" style="margin-top:12px;">
+            <div class="field req"><label><span class="rs">*</span> Mg %</label><input type="number" id="trimMg" step="0.001" value="0.000" oninput="recalc()"/></div>
+            <div class="field req"><label><span class="rs">*</span> Ba %</label><input type="number" id="trimBa" step="0.0001" value="0.0000" oninput="recalc()"/></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><span class="ldot" style="background:var(--success)"></span>In Spec (±5%)</span>
+      <span><span class="ldot" style="background:var(--error)"></span>High (Above 5%)</span>
+      <span><span class="ldot" style="background:var(--warn)"></span>Low (Below 5%)</span>
+    </div>
+
+  </div><div class="col-r">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="cstep">3</div>
+        <div class="ctitle">Recommended Additions</div>
+        <span id="addModeTag" style="font-size:0.75rem;font-weight:700;color:var(--primary);margin-left:auto;">
+          Charge Mode — Full Additions
+        </span>
+      </div>
+      <div style="padding:8px 14px;font-size:0.75rem;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--divider);">
+        <em>Note: You can manually edit the dashed input boxes to adjust the final composition if desired. Ladle additions hide automatically if 0.</em>
+      </div>
+      <div class="tw">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:160px;text-align:left">Material</th>
+              <th style="text-align:right;min-width:110px">Add (kg)</th>
+              <th style="text-align:right;min-width:80px">Price/kg</th>
+              <th style="text-align:right;min-width:90px">Cost ($)</th>
+              <th style="min-width:90px;text-align:center">When</th>
+              <th style="text-align:left">Notes</th>
+            </tr>
+          </thead>
+          <tbody id="addBody"></tbody>
+          <tfoot id="addFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="cstep">4</div>
+        <div class="ctitle">No Loss Analysis — Chemistry Prediction</div>
+      </div>
+      <div class="tw">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:center">Element</th>
+              <th style="text-align:center">Target</th>
+              <th style="text-align:center">Acceptable Range</th>
+              <th style="text-align:center" title="Chemistry in furnace before Ladle">Bath %</th>
+              <th style="text-align:center" title="Final complete melt chemistry">Final %</th>
+              <th style="text-align:center">Diff</th>
+            </tr>
+          </thead>
+          <tbody id="nlaBody"></tbody>
+        </table>
+      </div>
+      <div style="padding:12px 14px;border-top:1px solid var(--divider);">
+        <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+          letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">Melt Cost Metrics</div>
+        <div class="metrics-strip">
+          <div class="metric">
+            <div class="metric-lbl">Total Melt Cost</div>
+            <div class="metric-val" id="metTotalCost">—</div>
+            <div class="metric-sub">All materials</div>
+          </div>
+          <div class="metric">
+            <div class="metric-lbl">Cost Per Tonne</div>
+            <div class="metric-val" id="metCostTonne">—</div>
+            <div class="metric-sub">$/tonne heat</div>
+          </div>
+          <div class="metric">
+            <div class="metric-lbl">Alloy Additions</div>
+            <div class="metric-val" id="metAlloysKg">—</div>
+            <div class="metric-sub">kg above base</div>
+          </div>
+          <div class="metric">
+            <div class="metric-lbl">Steel Scrap kg</div>
+            <div class="metric-val" id="metSteelKg">—</div>
+            <div class="metric-sub">Furnace balance</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 14px; border-top:1px solid var(--divider); background: var(--surface2);">
+         <button id="saveHistoryBtn" class="btn btn-primary" style="width:100%; font-size:0.9rem;" onclick="saveToHistory()">💾 Log Heat to History</button>
+      </div>
+    </div>
+
+  </div></div></div><div class="page" id="page-history">
+  <div class="pg-title">Melt History Logging</div>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">
+    Logs are saved locally to your browser. You can export this table to Excel for official record keeping.
+  </p>
+  <div style="margin-bottom: 14px; display:flex; gap: 10px;">
+     <button class="btn" onclick="clearHistory()">🗑 Clear All History</button>
+     <button class="btn btn-primary" onclick="exportHistoryExcel()">⬇ Export History to Excel</button>
+  </div>
+  <div class="card tw">
+     <table>
+       <thead>
+         <tr>
+            <th style="text-align:left">Date/Time</th>
+            <th>Heat No.</th>
+            <th>Grade</th>
+            <th>Kg Poured</th>
+            <th>Cost ($)</th>
+            <th>Steel</th>
+            <th>Returns</th>
+            <th>Shov.</th>
+            <th>FeSi</th>
+            <th>Graph.</th>
+            <th>FeMn</th>
+            <th>Cu</th>
+            <th>FeMo</th>
+            <th>FePhos</th>
+            <th>FeSiMg</th>
+            <th>Inoc.</th>
+            <th>Action</th>
+         </tr>
+       </thead>
+       <tbody id="historyBody"></tbody>
+     </table>
+  </div>
+</div>
+
+<div class="page" id="page-alloys">
+  <div class="pg-title">Alloy Library — Compositions &amp; Pricing</div>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">
+    Update compositions, prices, or add new alloys. All values feed directly into Dashboard calculations.
+  </p>
+  <div class="tw">
+    <table class="alloys-tbl">
+      <thead>
+        <tr>
+          <th style="text-align:left">Material Name</th>
+          <th>Price/kg ($)</th>
+          <th>C %</th><th>Si %</th><th>Mn %</th><th>P %</th>
+          <th>Mo %</th><th>Cu %</th><th>Mg %</th><th>Ba %</th>
+          <th>Fe %</th><th style="text-align:left">Notes</th>
+        </tr>
+      </thead>
+      <tbody id="alloysBody"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+    <button class="btn btn-primary" onclick="addNewAlloy()">+ Add New Alloy</button>
+    <button class="btn" onclick="resetAlloys()">Reset to Defaults</button>
+  </div>
+</div>
+
+
+<div class="page" id="page-grades">
+  <div class="pg-title">Grade Library</div>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">
+    Edit grade specifications or define new ones below. Values ending in <code>*</code> indicate trace elements where no addition will be calculated.
+  </p>
+  <div class="tw">
+    <table class="gtbl">
+      <thead>
+        <tr>
+          <th style="text-align:left">Grade Name</th><th>CE</th>
+          <th>C %</th><th>Si %</th><th>Mn %</th><th>P %</th>
+          <th>Mo %</th><th>Cu %</th><th>Mg %</th><th>Ba %</th>
+          <th style="text-align:left">Notes</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="gradeBody"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+    <button class="btn btn-primary" onclick="addNewGrade()">+ Add New Grade</button>
+  </div>
+</div>
+
+
+<div class="page" id="page-settings">
+  <div class="pg-title">Settings</div>
+  <div class="sgrid">
+    <div class="scard">
+      <div class="shead">Calculation Formulas</div>
+      <div class="sbody">
+        <div class="fbox">
+          <strong>Steel Scrap kg (base material — fills furnace heat weight balance)</strong><br>
+          <code>Steel Scrap = TapWeight − ReturnsKg − AllFurnaceAlloys</code><br><br>
+          <strong>Reduced Si aim (E35) — accounts for ladle Si contributions</strong><br>
+          <code>E35 = Si_aim − (LadleSi_contributed_to_Total_Weight)</code><br><br>
+          <strong>Alloy Calculation (Accounting for Returns in CHARGE mode)</strong><br>
+          <code>Required_Alloy = (Heat×Target% − Heat×Base% − ReturnsKg×(Return% − Base%)) / AlloyPurity%</code><br><br>
+          <strong>Carbon Equivalent (CE)</strong><br>
+          <code>CE = C% + (Si% ÷ 3) + (P% ÷ 3)</code>
+        </div>
+      </div>
+    </div>
+    <div class="scard">
+      <div class="shead">Ladle Practice Reference</div>
+      <div class="sbody">
+        <div class="fg fg-2">
+          <div class="field">
+            <label>Inoculant dose (kg/100kg melt)</label>
+            <input type="number" id="inocDose" value="0.50" step="0.01" oninput="recalc()"/>
+          </div>
+          <div class="field">
+            <label>FeSiMg dose (kg/100kg melt)</label>
+            <input type="number" id="fesimgDose" value="1.43" step="0.01" oninput="recalc()"/>
+          </div>
+        </div>
+        <div class="fbox" id="practiceBox"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="page" id="page-howto">
+  <div class="pg-title">How to Use</div>
+  <div class="howto">
+    <div class="scard">
+      <div class="shead">CHARGE Mode — Planning the furnace melt</div>
+      <div class="sbody"><ol style="padding-left:18px;font-size:.88rem;line-height:2.2">
+        <li>Select <strong>CHARGE MODE</strong></li>
+        <li>Select your <strong>Target Grade (*)</strong> and enter <strong>Target Heat Weight (*)</strong>.</li>
+        <li>In Step 2, define your <strong>Returns</strong>. You can pick a saved grade or manually enter a custom chemistry. Enter the weight you plan to charge.</li>
+        <li>The calculator automatically predicts the full furnace additions needed, balances the rest with Steel Scrap, and also provides your planned <strong>Ladle Additions</strong> upfront.</li>
+        <li>You can manually override any recommended addition by editing the dashed input boxes in Step 3.</li>
+      </ol></div>
+    </div>
+    <div class="scard">
+      <div class="shead">TRIM Mode — Ladle treatment after furnace tap</div>
+      <div class="sbody"><ol style="padding-left:18px;font-size:.88rem;line-height:2.2">
+        <li>Select <strong>TRIM MODE</strong></li>
+        <li>Enter the actual <strong>Bath Weight</strong>. By default it uses your target weight, but update this if your tap was heavier/lighter.</li>
+        <li>Enter <strong>actual spectrometer results</strong> (C, Si, Mn, P, Mo, Cu, Mg, Ba). The calculator correctly assumes this reading *already includes* your physical Returns and Steel Scrap.</li>
+        <li>Calculator evaluates chemistry gaps purely on Actual vs Target and provides the remaining Furnace & Ladle additions needed to correct the batch.</li>
+      </ol></div>
+    </div>
+  </div>
+</div>
+
+</div></div><script>
+// ══════════════════════════════════════════════════════════
+//  HELPER FUNCTIONS FOR TRACE ELEMENTS
+// ══════════════════════════════════════════════════════════
+function getNum(val) { return parseFloat(String(val).replace('*', '')) || 0; }
+function isTrace(val) { return String(val).includes('*'); }
+function fmt(v, dec) { 
+    if(String(v).includes('*')) return String(v); 
+    return parseFloat(v).toFixed(dec); 
+}
+
+// ══════════════════════════════════════════════════════════
+//  GRADE DATA (Updated Trace Logic via '*')
+// ══════════════════════════════════════════════════════════
+let GRADES = [
+  {name: "SG",       CE:4.57, C:3.70, Si:2.60, Mn:"0.30*", P:"0.02*", Mo:"0.10*", Cu:"0.10*", Mg:0.060, Ba:0.0145, notes:"Standard SG iron"},
+  {name: "SG 500/7", CE:4.57, C:3.70, Si:2.60, Mn:"0.30*", P:"0.02*", Mo:"0.10*", Cu:"0.10", Mg:0.060, Ba:0.0145, notes:"Min 500 MPa, 7% elong"},
+  {name: "SG 600/3", CE:4.57, C:3.70, Si:2.60, Mn:"0.30*", P:"0.02*", Mo:"0.10*", Cu:0.50, Mg:0.060, Ba:0.0145, notes:"Min 600 MPa, 3% elong"},
+  {name: "SG 700/2", CE:4.57, C:3.70, Si:2.60, Mn:1.00, P:"0.02*", Mo:"0.10*", Cu:0.50, Mg:0.060, Ba:0.0145, notes:"Higher Mn with Cu"},
+  {name: "SG 900/2", CE:4.57, C:3.70, Si:2.60, Mn:1.00, P:"0.02*", Mo:0.30, Cu:1.00, Mg:0.060, Ba:0.0145, notes:"Higher Mn with Cu and Mo"},
+  {name: "T200",     CE:4.33, C:3.60, Si:2.20, Mn:"0.30*", P:"0.02*", Mo:"0.10*", Cu:"0.10*", Mg:0.000, Ba:0.0073, notes:"Grey iron T200"},
+  {name: "T220",     CE:4.08, C:3.41, Si:2.00, Mn:"0.30*", P:"0.02*", Mo:"0.10*", Cu:"0.10*", Mg:0.000, Ba:0.0073, notes:"Grey iron T220"},
+  {name: "T260",     CE:3.67, C:3.00, Si:2.00, Mn:0.70, P:"0.02*", Mo:"0.10*", Cu:"0.10*", Mg:0.000, Ba:0.0073, notes:"Grey iron T260"},
+  {name: "HiPhos",   CE:4.57, C:2.95, Si:2.10, Mn:0.80, P:2.75, Mo:"0.10*", Cu:"0.10*", Mg:0.000, Ba:0.000,  notes:"High phosphorus grey"}
+];
+
+// ══════════════════════════════════════════════════════════
+//  ALLOY DATA
+// ══════════════════════════════════════════════════════════
+const DEFAULT_ALLOYS = [
+  {id:"CuMetal",   name:"Copper Metal",      price:22.30, C:0,     Si:0,     Mn:0,     P:0,     Mo:0,    Cu:100,   Mg:0,    Ba:0,    Fe:0,     notes:"Pure copper"},
+  {id:"MnMetal",   name:"MN Metal",          price:6.34,  C:0,     Si:0,     Mn:100,   P:0,     Mo:0,    Cu:0,     Mg:0,    Ba:0,    Fe:0,     notes:"Manganese metal — fine trim only"},
+  {id:"FeMnHC",    name:"FeMn HC",           price:2.23,  C:6.95,  Si:1.35,  Mn:74.18, P:0.10,  Mo:0,    Cu:0,     Mg:0,    Ba:0,    Fe:17.40, notes:"High carbon FeMn"},
+  {id:"FeMo",      name:"FeMo",              price:64.35, C:0.010, Si:0.08,  Mn:0,     P:0.03,  Mo:65,   Cu:0.39,  Mg:0,    Ba:0,    Fe:34.44, notes:"Ferro Molybdenum"},
+  {id:"FePhos",    name:"FePhos",            price:1.14,  C:0.10,  Si:0.65,  Mn:1.38,  P:25.20, Mo:0,    Cu:0,     Mg:0,    Ba:0,    Fe:72.25, notes:"Ferro Phosphorus"},
+  {id:"FeSi",      name:"FeSi",              price:2.72,  C:0.08,  Si:72.86, Mn:0,     P:0,     Mo:0,    Cu:0,     Mg:0,    Ba:0,    Fe:27.05, notes:"Ferro Silicon"},
+  {id:"FeSiMg",    name:"FeSiMg (Ladle)",    price:4.85,  C:0.37,  Si:46.50, Mn:0.16,  P:0.04,  Mo:0,    Cu:0,     Mg:3.00, Ba:0,    Fe:49.93, notes:"Nodulariser — ladle only"},
+  {id:"Graphite",  name:"Graphite",          price:1.52,  C:99.00, Si:0,     Mn:0,     P:0,     Mo:0,    Cu:0,     Mg:0,    Ba:0,    Fe:1.00,  notes:"Carbon raiser"},
+  {id:"Inoculant", name:"Inoculant (Ladle)", price:4.95,  C:0.05,  Si:71.39, Mn:0.05,  P:0.04,  Mo:0,    Cu:0,     Mg:0,    Ba:2.90, Fe:0,     notes:"Ba inoculant — ladle only"},
+  {id:"NiMg",      name:"NiMg",              price:49.50, C:1.30,  Si:1.15,  Mn:0,     P:0,     Mo:0,    Cu:0,     Mg:16.02,Ba:0,    Fe:0.628, notes:"Nickel Magnesium"},
+  {id:"PigIron",   name:"Pig Iron",          price:0.65,  C:4.25,  Si:0.15,  Mn:0.01,  P:0.03,  Mo:0,    Cu:0,     Mg:0,    Ba:0,    Fe:95.54, notes:"Pig iron charge"},
+  {id:"ShovScrap", name:"Shovelling Scrap",  price:0.60,  C:0.16,  Si:0.020,  Mn:0.70,  P:0.01,  Mo:0,    Cu:0,     Mg:0,    Ba:0,    Fe:99.01, notes:"Internal scrap"},
+  {id:"SteelScrap",name:"Steel Scrap",       price:0.80,  C:0.12,  Si:0.20,  Mn:0.25,  P:0.01,  Mo:0,    Cu:0,     Mg:0,    Ba:0,    Fe:99.36, notes:"Base filler material"}
+];
+
+let ALLOYS = JSON.parse(JSON.stringify(DEFAULT_ALLOYS));
+let mode = "CHARGE";
+let shovKg = 0;
+let steelOverride = null; 
+let alloyOverrides = {}; 
+let lastCalcState = {}; 
+
+function $(id){return document.getElementById(id);}
+function num(id){const v=parseFloat($(id)?$(id).value:0);return isFinite(v)?v:0;}
+function clamp0(v){return v>0?v:0;}
+function getAlloy(idOrName){return ALLOYS.find(a=>a.id===idOrName || a.name===idOrName)||{price:0,C:0,Si:0,Mn:0,P:0,Mo:0,Cu:0,Mg:0,Ba:0,Fe:0};}
+
+let modalCallback = null;
+function showModal(msg, callback, isAlert = false) {
+  $("modalText").innerHTML = msg;
+  $("customModal").style.display = "flex";
+  modalCallback = callback;
+  if (isAlert) {
+    $("modalBtnCancel").style.display = "none";
+    $("modalBtnConfirm").textContent = "OK";
+    $("modalBtnConfirm").style.background = "var(--primary)";
+  } else {
+    $("modalBtnCancel").style.display = "block";
+    $("modalBtnConfirm").textContent = "Confirm";
+    $("modalBtnConfirm").style.background = "var(--error)";
+  }
+}
+function closeModal(result) {
+  $("customModal").style.display = "none";
+  if (result && modalCallback) modalCallback();
+  modalCallback = null;
+}
+
+function showTab(name,el){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  $("page-"+name).classList.add("active");
+  el.classList.add("active");
+  if(name==="alloys") buildAlloysTable();
+  if(name==="grades") buildGradeTable();
+  if(name==="history") buildHistoryTable();
+}
+
+function toggleTheme(){
+  const root=document.documentElement;
+  const next=root.getAttribute("data-theme")==="dark"?"light":"dark";
+  root.setAttribute("data-theme",next);
+  $("themeBtn").textContent=next==="dark"?"Light":"Dark";
+}
+
+function setMode(m){
+  mode=m;
+  $("modeCharge").classList.toggle("active",m==="CHARGE");
+  $("modeTrim").classList.toggle("active",m==="TRIM");
+  updateModeUI();
+  recalc();
+}
+
+function syncBathWeight() {
+  if(!$("bathWeight").dataset.touched) {
+     $("bathWeight").value = $("heatWeight").value;
+  }
+}
+
+function updateModeUI(){
+  const trim = mode==="TRIM";
+  const iBox = $("modeInfo");
+  const s2 = $("step2Info");
+  
+  if(trim){
+    iBox.className="warn-box";
+    iBox.innerHTML="<strong>TRIM MODE:</strong> Enter actual bath weight and spectrometer results. Calculator compares actual vs target to provide remaining Furnace and Ladle additions.";
+    s2.className="warn-box";
+    s2.style.fontSize="0.74rem";
+    s2.textContent="Enter actual bath weight and chemistry from spectrometer. Also fill Mg % and Ba % if already partially treated.";
+    $("step2Title").textContent="Bath Analysis";
+    $("meltTag").textContent="Trim";
+    $("meltTag").className="ctag tag-trim";
+    $("addModeTag").textContent="Trim Mode — Required Additions";
+    $("addModeTag").style.color="var(--warn)";
+    
+    if ($("chargeExtraFields")) $("chargeExtraFields").style.display="none";
+    if ($("trimModeFields")) $("trimModeFields").style.display="block";
+    
+    syncBathWeight();
+  } else {
+    iBox.className="info-box";
+    iBox.innerHTML="<strong>CHARGE MODE:</strong> Plan the heat. Calculates full Furnace Additions + planned Ladle Additions upfront.";
+    s2.className="info-box";
+    s2.style.fontSize="0.74rem";
+    s2.textContent="Select Returns grade from library or enter custom chemistry below. If none, leave weight at 0.";
+    $("step2Title").textContent="Charge Analysis";
+    $("meltTag").textContent="Charge";
+    $("meltTag").className="ctag tag-charge";
+    $("addModeTag").textContent="Charge Mode — Full Additions Plan";
+    $("addModeTag").style.color="var(--primary)";
+    
+    if ($("chargeExtraFields")) $("chargeExtraFields").style.display="block";
+    if ($("trimModeFields")) $("trimModeFields").style.display="none";
+  }
+}
+
+function updateGradeSelects(){
+  const opts = GRADES.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
+  const currentG = $("grade").value;
+  $("grade").innerHTML = opts;
+  if(GRADES.find(g=>g.name===currentG)) $("grade").value = currentG;
+
+  const baseOpts = `<option value="None">None</option><option value="Custom">Custom Chemistry</option>` + opts;
+  
+  const currentR1 = $("returnGrade").value;
+  $("returnGrade").innerHTML = baseOpts;
+  if(["None", "Custom"].includes(currentR1) || GRADES.find(g=>g.name===currentR1)) $("returnGrade").value = currentR1;
+  else $("returnGrade").value = "None";
+
+  if($("returnGrade2")){
+    const currentR2 = $("returnGrade2").value;
+    $("returnGrade2").innerHTML = baseOpts;
+    if(["None", "Custom"].includes(currentR2) || GRADES.find(g=>g.name===currentR2)) $("returnGrade2").value = currentR2;
+    else $("returnGrade2").value = "None";
+  }
+}
+
+function loadGrade(name){
+  updateGradeTargetBox(name);
+  recalc();
+}
+
+function updateGradeTargetBox(name){
+  if(!$("gradeTargetBox")) return;
+  const g = GRADES.find(gr=>gr.name===name) || GRADES[0];
+  const aimCE = getNum(g.C) + (getNum(g.Si)/3) + (getNum(g.P)/3);
+  $("gradeTargetBox").innerHTML=
+    `CE: <b>${aimCE.toFixed(2)}</b> &nbsp;|&nbsp; `+
+    `C: <b>${fmt(g.C,2)}%</b> &nbsp;|&nbsp; Si: <b>${fmt(g.Si,2)}%</b> &nbsp;|&nbsp; `+
+    `Mn: <b>${fmt(g.Mn,2)}%</b> &nbsp;|&nbsp; P: <b>${fmt(g.P,3)}%</b><br>`+
+    `Mo: <b>${fmt(g.Mo,3)}%</b> &nbsp;|&nbsp; Cu: <b>${fmt(g.Cu,3)}%</b> &nbsp;|&nbsp; `+
+    `Mg: <b>${fmt(g.Mg,3)}%</b> &nbsp;|&nbsp; Ba: <b>${fmt(g.Ba,4)}%</b>`;
+}
+
+function loadReturn1() {
+  const v = $("returnGrade").value;
+  if (v === "None") $("returnKg").value = 0;
+  if (v !== "None" && v !== "Custom") {
+    const g = GRADES.find(gr=>gr.name===v);
+    if(g) {
+      $("r1C").value = getNum(g.C).toFixed(2);
+      $("r1Si").value = getNum(g.Si).toFixed(2);
+      $("r1Mn").value = getNum(g.Mn).toFixed(2);
+      $("r1P").value = getNum(g.P).toFixed(3);
+      $("r1Mo").value = getNum(g.Mo).toFixed(3);
+      $("r1Cu").value = getNum(g.Cu).toFixed(3);
+    }
+  }
+  recalc();
+}
+
+function loadReturn2() {
+  const v = $("returnGrade2").value;
+  if (v === "None") $("returnKg2").value = 0;
+  if (v !== "None" && v !== "Custom") {
+    const g = GRADES.find(gr=>gr.name===v);
+    if(g) {
+      $("r2C").value = getNum(g.C).toFixed(2);
+      $("r2Si").value = getNum(g.Si).toFixed(2);
+      $("r2Mn").value = getNum(g.Mn).toFixed(2);
+      $("r2P").value = getNum(g.P).toFixed(3);
+      $("r2Mo").value = getNum(g.Mo).toFixed(3);
+      $("r2Cu").value = getNum(g.Cu).toFixed(3);
+    }
+  }
+  recalc();
+}
+
+function markCustom1() { if($("returnGrade")) $("returnGrade").value = "Custom"; }
+function markCustom2() { if($("returnGrade2")) $("returnGrade2").value = "Custom"; }
+
+// ══════════════════════════════════════════════════════════
+//  MAIN CALCULATION
+// ══════════════════════════════════════════════════════════
+function recalc(){
+  if(!$("grade")) return;
+  const g    = GRADES.find(gr=>gr.name===$("grade").value) || GRADES[0];
+  const trim = mode==="TRIM";
+  const heat = trim ? getNum($("bathWeight").value) : getNum($("heatWeight").value);
+
+  // Grade targets using helper function
+  const tC=getNum(g.C), tSi=getNum(g.Si), tMn=getNum(g.Mn), tP=getNum(g.P), tMo=getNum(g.Mo), tCu=getNum(g.Cu);
+  const tMg=getNum(g.Mg), tBa=getNum(g.Ba);
+
+  // Detect Trace flags
+  const skipMn = isTrace(g.Mn);
+  const skipP  = isTrace(g.P);
+  const skipMo = isTrace(g.Mo);
+  const skipCu = isTrace(g.Cu);
+
+  // Chemistry Setup dynamically based on mode
+  let rKg = 0, rC = 0, rSi = 0, rMn = 0, rP = 0, rMo = 0, rCu = 0;
+  let bC = 0, bSi = 0, bMn = 0, bP = 0, bMo = 0, bCu = 0;
+  let bMg = 0, bBa = 0;
+
+  const steelA  = getAlloy("SteelScrap");
+  const shovA   = getAlloy("ShovScrap");
+  const fesiA   = getAlloy("FeSi");
+  const graphA  = getAlloy("Graphite");
+  const femhcA  = getAlloy("FeMnHC");
+  const cuA     = getAlloy("CuMetal");
+  const femoA   = getAlloy("FeMo");
+  const fephA   = getAlloy("FePhos");
+  const fesimgA = getAlloy("FeSiMg");
+  const inocA   = getAlloy("Inoculant");
+
+  if(trim){
+      bC = getNum($("trimC").value); bSi = getNum($("trimSi").value); bMn = getNum($("trimMn").value);
+      bP = getNum($("trimP").value); bMo = getNum($("trimMo").value); bCu = getNum($("trimCu").value);
+      bMg = getNum($("trimMg").value); bBa = getNum($("trimBa").value);
+  } else {
+      const kg1 = getNum($("returnKg").value);
+      const kg2 = $("returnKg2") ? getNum($("returnKg2").value) : 0;
+      rKg = kg1 + kg2;
+
+      rC  = rKg > 0 ? (kg1 * getNum($("r1C").value) + kg2 * getNum($("r2C").value)) / rKg : 0;
+      rSi = rKg > 0 ? (kg1 * getNum($("r1Si").value) + kg2 * getNum($("r2Si").value)) / rKg : 0;
+      rMn = rKg > 0 ? (kg1 * getNum($("r1Mn").value) + kg2 * getNum($("r2Mn").value)) / rKg : 0;
+      rP  = rKg > 0 ? (kg1 * getNum($("r1P").value) + kg2 * getNum($("r2P").value)) / rKg : 0;
+      rMo = rKg > 0 ? (kg1 * getNum($("r1Mo").value) + kg2 * getNum($("r2Mo").value)) / rKg : 0;
+      rCu = rKg > 0 ? (kg1 * getNum($("r1Cu").value) + kg2 * getNum($("r2Cu").value)) / rKg : 0;
+      
+      if ($("combinedReturnsBox")) {
+         $("combinedReturnsBox").innerHTML = `C: <b>${rC.toFixed(2)}%</b> | Si: <b>${rSi.toFixed(2)}%</b> | Mn: <b>${rMn.toFixed(2)}%</b><br>P: <b>${rP.toFixed(3)}%</b> | Mo: <b>${rMo.toFixed(3)}%</b> | Cu: <b>${rCu.toFixed(3)}%</b>`;
+      }
+
+      bC = getNum(steelA.C); bSi = getNum(steelA.Si); bMn = getNum(steelA.Mn);
+      bP = getNum(steelA.P); bMo = getNum(steelA.Mo); bCu = getNum(steelA.Cu);
+  }
+
+  // ── 1. CALC LADLE ADDITIONS FIRST ──
+  const calcFeSiMg = clamp0((heat*tMg/100 - heat*bMg/100)/(Math.max(0.001, getNum(fesimgA.Mg)/100)));
+  const calcInoc   = clamp0((heat*tBa/100 - heat*bBa/100)/(Math.max(0.001, getNum(inocA.Ba)/100)));
+
+  const kgFeSiMg = alloyOverrides["FeSiMg"] !== undefined ? alloyOverrides["FeSiMg"] : calcFeSiMg;
+  const kgInoc   = alloyOverrides["Inoculant"] !== undefined ? alloyOverrides["Inoculant"] : calcInoc;
+
+  // ── 2 & 3. INITIAL CHEMISTRY GAPS ──
+  const effRKg = trim ? 0 : rKg; 
+
+  const gapMo = heat*tMo/100 - heat*bMo/100 - effRKg*(rMo - bMo)/100 - shovKg*(getNum(shovA.Mo) - bMo)/100 - kgFeSiMg*(getNum(fesimgA.Mo))/100 - kgInoc*(getNum(inocA.Mo))/100;
+  const gapCu = heat*tCu/100 - heat*bCu/100 - effRKg*(rCu - bCu)/100 - shovKg*(getNum(shovA.Cu) - bCu)/100 - kgFeSiMg*(getNum(fesimgA.Cu))/100 - kgInoc*(inocA.Cu)/100;
+  const gapP  = heat*tP/100  - heat*bP/100  - effRKg*(rP - bP)/100   - shovKg*(getNum(shovA.P) - bP)/100   - kgFeSiMg*(getNum(fesimgA.P))/100   - kgInoc*(getNum(inocA.P))/100;
+  const gapMn = heat*tMn/100 - heat*bMn/100 - effRKg*(rMn - bMn)/100 - shovKg*(getNum(shovA.Mn) - bMn)/100 - kgFeSiMg*(getNum(fesimgA.Mn))/100 - kgInoc*(getNum(inocA.Mn))/100;
+  const gapSi = heat*tSi/100 - heat*bSi/100 - effRKg*(rSi - bSi)/100 - shovKg*(getNum(shovA.Si) - bSi)/100 - kgFeSiMg*(getNum(fesimgA.Si))/100 - kgInoc*(getNum(inocA.Si))/100;
+  const gapC  = heat*tC/100  - heat*bC/100  - effRKg*(rC - bC)/100   - shovKg*(getNum(shovA.C) - bC)/100   - kgFeSiMg*(getNum(fesimgA.C))/100   - kgInoc*(getNum(inocA.C))/100;
+
+  // ── 4. CASCADING FURNACE ADDITIONS (Waterfall Math) ──
+  // Using trace skip logic
+  const calcFeMo   = skipMo ? 0 : clamp0(gapMo / Math.max(0.001, (femoA.Mo - bMo)/100));
+  const calcCu     = skipCu ? 0 : clamp0(gapCu / Math.max(0.001, (cuA.Cu - bCu)/100));
+
+  const adjGapP    = gapP - calcFeMo*(getNum(femoA.P) - bP)/100 - calcCu*(getNum(cuA.P) - bP)/100;
+  const calcFePhos = skipP ? 0 : clamp0(adjGapP / Math.max(0.001, (fephA.P - bP)/100));
+
+  const adjGapMn   = gapMn - calcFeMo*(getNum(femoA.Mn) - bMn)/100 - calcCu*(getNum(cuA.Mn) - bMn)/100 - calcFePhos*(getNum(fephA.Mn) - bMn)/100;
+  const calcFeMnHC = skipMn ? 0 : clamp0(adjGapMn / Math.max(0.001, (femhcA.Mn - bMn)/100));
+
+  const adjGapSi   = gapSi - calcFeMo*(getNum(femoA.Si) - bSi)/100 - calcCu*(getNum(cuA.Si) - bSi)/100 - calcFePhos*(getNum(fephA.Si) - bSi)/100 - calcFeMnHC*(getNum(femhcA.Si) - bSi)/100;
+  const calcFeSi   = clamp0(adjGapSi / Math.max(0.001, (fesiA.Si - bSi)/100));
+
+  const adjGapC    = gapC - calcFeMo*(getNum(femoA.C) - bC)/100 - calcCu*(getNum(cuA.C) - bC)/100 - calcFePhos*(getNum(fephA.C) - bC)/100 - calcFeMnHC*(femhcA.C - bC)/100 - calcFeSi*(getNum(fesiA.C) - bC)/100;
+  const calcGraph  = clamp0(adjGapC / Math.max(0.001, (graphA.C - bC)/100));
+
+  const E35 = tSi - (kgFeSiMg*(getNum(fesimgA.Si))/100 + kgInoc*(getNum(inocA.Si))/100)/heat*100;
+
+  // Apply Overrides
+  const kgFeSi   = alloyOverrides["FeSi"] !== undefined ? alloyOverrides["FeSi"] : calcFeSi;
+  const kgGraph  = alloyOverrides["Graphite"] !== undefined ? alloyOverrides["Graphite"] : calcGraph;
+  const kgFeMnHC = alloyOverrides["FeMnHC"] !== undefined ? alloyOverrides["FeMnHC"] : calcFeMnHC;
+  const kgCu     = alloyOverrides["CuMetal"] !== undefined ? alloyOverrides["CuMetal"] : calcCu;
+  const kgFeMo   = alloyOverrides["FeMo"] !== undefined ? alloyOverrides["FeMo"] : calcFeMo;
+  const kgFePhos = alloyOverrides["FePhos"] !== undefined ? alloyOverrides["FePhos"] : calcFePhos;
+
+  // ── 5. MASS BALANCE ──
+  const alloySum = kgFeSi + kgGraph + kgFeMnHC + kgCu + kgFeMo + kgFePhos + shovKg;
+  const ladleSum = kgFeSiMg + kgInoc;
+  
+  let kgSteel;
+  if(steelOverride !== null){
+    kgSteel = steelOverride;
+  } else {
+    kgSteel = Math.max(heat - alloySum - rKg, 0); 
+  }
+
+  // ══ BUILD ADDITIONS TABLE ══
+  let bodyHtml = "";
+  let totalCost = 0;
+  let totalAlloyKg = 0;
+
+  function makeRow(alloyId, name, kg, alObj, whenLabel, note, isManual, isBase, isOverridable){
+    const cost = kg * getNum(alObj.price);
+    totalCost += cost;
+    if(!isBase) totalAlloyKg += kg;
+
+    let kgTd;
+    if(isManual){
+      kgTd = `<input class="manual-input" type="number" min="0" step="0.1" value="${kg}" onchange="shovKg=parseFloat(this.value)||0;recalc()" />`;
+    } else if(isOverridable){
+      const isOvr = alloyOverrides[alloyId] !== undefined;
+      const displayVal = isOvr ? alloyOverrides[alloyId].toFixed(2) : kg.toFixed(2);
+      kgTd = `<input class="steel-override ${isOvr?'overridden':''}"
+               type="number" min="0" step="0.1" value="${displayVal}" placeholder="${kg.toFixed(2)}"
+               oninput="setAlloyOverride('${alloyId}', this.value); recalc()"/>`;
+    } else {
+      kgTd = kg < 0.001 && !isBase ? `<span class="zero">0.00</span>` : `<strong class="kg-val">${kg.toFixed(2)}</strong>`;
+    }
+
+    const priceTd = getNum(alObj.price)>0 ? `$${getNum(alObj.price).toFixed(2)}` : `<span class="zero">—</span>`;
+    const costTd  = cost>0.005 ? `<strong class="cost-val">$${cost.toFixed(2)}</strong>` : `<span class="zero">—</span>`;
+    const whenCls = whenLabel.toLowerCase().replace(' ','-');
+    const whenTd  = `<span class="when-badge when-${whenCls}">${whenLabel}</span>`;
+    const rowCls  = isManual ? "manual-row" : isBase ? "base-row" : "";
+    const zero = kg < 0.001 && !isManual;
+    const nameSty = (zero && !isManual && !isBase && !isOverridable) ? `style="color:var(--faint)"` : "";
+
+    return `<tr class="${rowCls}">
+      <td class="mat-name" ${nameSty}>${name}</td>
+      <td style="text-align:right">${kgTd}</td>
+      <td style="text-align:right">${priceTd}</td>
+      <td style="text-align:right">${costTd}</td>
+      <td style="text-align:center">${whenTd}</td>
+      <td class="note-txt">${note}</td>
+    </tr>`;
+  }
+
+  bodyHtml += `<tr class="section-row"><td colspan="6">Furnace Additions</td></tr>`;
+
+  const steelNote = steelOverride!==null
+    ? `Manual override — calc req: ${Math.max(heat-alloySum-rKg,0).toFixed(1)} kg`
+    : `Fills balance of furnace tap weight (${heat} kg)`;
+  const steelKgDisplay = kgSteel.toFixed(2);
+  const steelCost = kgSteel * getNum(steelA.price);
+  totalCost += steelCost;
+  totalAlloyKg += kgSteel;
+  
+  bodyHtml += `<tr>
+    <td class="mat-name"><strong>Steel Scrap</strong></td>
+    <td style="text-align:right">
+      <input class="steel-override ${steelOverride!==null?'overridden':''}" type="number" min="0" step="1"
+        value="${steelKgDisplay}" placeholder="auto" title="Leave auto or type to override"
+        oninput="steelOverride=this.value===''?null:(parseFloat(this.value)||0);this.className='steel-override'+(steelOverride!==null?' overridden':'');recalc()"/>
+    </td>
+    <td style="text-align:right">$${getNum(steelA.price).toFixed(2)}</td>
+    <td style="text-align:right"><strong class="cost-val">$${steelCost.toFixed(2)}</strong></td>
+    <td style="text-align:center"><span class="when-badge when-furnace">Furnace</span></td>
+    <td class="note-txt">${steelNote}</td>
+  </tr>`;
+
+  if(!trim){
+      const kg1 = getNum($("returnKg").value);
+      const kg2 = $("returnKg2") ? getNum($("returnKg2").value) : 0;
+      if(kg1 > 0){
+          const n1 = $("returnGrade").value === "Custom" ? "Returns 1 (Custom)" : `Returns (${$("returnGrade").value})`;
+          bodyHtml += makeRow("Returns1", n1, kg1, {price: 0}, "Furnace", `Primary returns chemistry`, false, true, false);
+      }
+      if(kg2 > 0){
+          const n2 = $("returnGrade2").value === "Custom" ? "Returns 2 (Custom)" : `Returns (${$("returnGrade2").value})`;
+          bodyHtml += makeRow("Returns2", n2, kg2, {price: 0}, "Furnace", `Secondary returns chemistry`, false, true, false);
+      }
+  }
+
+  bodyHtml += makeRow("FeMnHC",   femhcA.name, kgFeMnHC, femhcA, "Furnace", `Mn aim ${fmt(g.Mn, 2)}%`, false, false, true);
+  bodyHtml += makeRow("FeSi",     fesiA.name,  kgFeSi,   fesiA,  "Furnace", `Si aim in bath ${E35.toFixed(3)}%`, false, false, true);
+  bodyHtml += makeRow("Graphite", graphA.name, kgGraph,  graphA, "Furnace", `C aim ${fmt(g.C, 2)}%`, false, false, true);
+  bodyHtml += makeRow("CuMetal",  cuA.name,    kgCu,     cuA,    "Furnace", `Cu aim ${fmt(g.Cu, 3)}%`, false, false, true);
+  bodyHtml += makeRow("FeMo",     femoA.name,  kgFeMo,   femoA,  "Furnace", `Mo aim ${fmt(g.Mo, 3)}%`, false, false, true);
+  bodyHtml += makeRow("FePhos",   fephA.name,  kgFePhos, fephA,  "Furnace", `P aim ${fmt(g.P, 3)}%`, false, false, true);
+  bodyHtml += makeRow("ShovScrap", shovA.name, shovKg,   shovA,  "Operator","<strong style='color:var(--warn)'>Enter kg manually</strong>", true, false, false);
+
+  // Dynamically hide Ladle row if additions are 0
+  if (kgFeSiMg > 0.001 || kgInoc > 0.001) {
+      const ladleHeader = trim ? "Ladle Additions (Required Correction)" : "Ladle Additions (Planned)";
+      bodyHtml += `<tr class="section-row-ladle"><td colspan="6">${ladleHeader}</td></tr>`;
+      if (kgFeSiMg > 0.001) bodyHtml += makeRow("FeSiMg", fesimgA.name, kgFeSiMg, fesimgA, "Ladle", `Mg aim ${fmt(g.Mg, 3)}%`, false, false, true);
+      if (kgInoc > 0.001) bodyHtml += makeRow("Inoculant", inocA.name, kgInoc, inocA, "Ladle", `Ba aim ${fmt(g.Ba, 4)}%`, false, false, true);
+  }
+
+  const finalMeltWeight = trim ? (heat + alloySum + ladleSum) : (kgSteel + rKg + alloySum + ladleSum);
+
+  $("addBody").innerHTML = bodyHtml;
+  $("addFoot").innerHTML = `<tr class="total-row">
+    <td><strong>TOTAL</strong></td>
+    <td style="text-align:right"><strong>${finalMeltWeight.toFixed(2)} kg</strong></td>
+    <td></td>
+    <td style="text-align:right"><span class="total-cost">$${totalCost.toFixed(2)}</span></td>
+    <td colspan="2"></td>
+  </tr>`;
+
+  // ══ NO LOSS ANALYSIS (NLA) - Split Bath vs Final ══
+  const tw_bath = finalMeltWeight - ladleSum;
+  const tw_final = finalMeltWeight; 
+
+  // 1. Calculate Mass of Elements in Bath (Before Ladle)
+  const massC_bath = (trim ? heat*bC/100 : kgSteel*bC/100 + rKg*rC/100) + kgGraph*getNum(graphA.C)/100 + kgFeMnHC*getNum(femhcA.C)/100 + shovKg*getNum(shovA.C)/100 + kgFePhos*getNum(fephA.C)/100;
+  const massSi_bath = (trim ? heat*bSi/100 : kgSteel*bSi/100 + rKg*rSi/100) + kgFeSi*getNum(fesiA.Si)/100 + kgFeMnHC*getNum(femhcA.Si)/100 + shovKg*getNum(shovA.Si)/100;
+  const massMn_bath = (trim ? heat*bMn/100 : kgSteel*bMn/100 + rKg*rMn/100) + kgFeMnHC*getNum(femhcA.Mn)/100 + shovKg*getNum(shovA.Mn)/100 + kgFePhos*getNum(fephA.Mn)/100;
+  const massP_bath = (trim ? heat*bP/100 : kgSteel*bP/100 + rKg*rP/100) + kgFePhos*getNum(fephA.P)/100 + shovKg*getNum(shovA.P)/100 + kgFeMnHC*getNum(femhcA.P)/100;
+  const massMo_bath = (trim ? heat*bMo/100 : kgSteel*bMo/100 + rKg*rMo/100) + kgFeMo*getNum(femoA.Mo)/100;
+  const massCu_bath = (trim ? heat*bCu/100 : kgSteel*bCu/100 + rKg*rCu/100) + kgCu*getNum(cuA.Cu)/100;
+  const massMg_bath = trim ? heat*bMg/100 : 0;
+  const massBa_bath = trim ? heat*bBa/100 : 0;
+
+  // 2. Convert to Bath %
+  const b_pC = tw_bath > 0 ? (massC_bath / tw_bath * 100) : 0;
+  const b_pSi = tw_bath > 0 ? (massSi_bath / tw_bath * 100) : 0;
+  const b_pMn = tw_bath > 0 ? (massMn_bath / tw_bath * 100) : 0;
+  const b_pP = tw_bath > 0 ? (massP_bath / tw_bath * 100) : 0;
+  const b_pMo = tw_bath > 0 ? (massMo_bath / tw_bath * 100) : 0;
+  const b_pCu = tw_bath > 0 ? (massCu_bath / tw_bath * 100) : 0;
+  const b_pMg = tw_bath > 0 ? (massMg_bath / tw_bath * 100) : 0;
+  const b_pBa = tw_bath > 0 ? (massBa_bath / tw_bath * 100) : 0;
+  const b_pCE = b_pC + (b_pSi/3) + (b_pP/3);
+
+  // 3. Calculate Mass of Elements in Final (After Ladle)
+  const massC_final = massC_bath + kgFeSiMg*getNum(fesimgA.C)/100 + kgInoc*getNum(inocA.C)/100;
+  const massSi_final = massSi_bath + kgFeSiMg*getNum(fesimgA.Si)/100 + kgInoc*getNum(inocA.Si)/100;
+  const massMn_final = massMn_bath + kgFeSiMg*getNum(fesimgA.Mn)/100 + kgInoc*getNum(inocA.Mn)/100;
+  const massP_final = massP_bath + kgFeSiMg*getNum(fesimgA.P)/100 + kgInoc*getNum(inocA.P)/100;
+  const massMo_final = massMo_bath + kgFeSiMg*getNum(fesimgA.Mo)/100 + kgInoc*getNum(inocA.Mo)/100;
+  const massCu_final = massCu_bath + kgFeSiMg*getNum(fesimgA.Cu)/100 + kgInoc*getNum(inocA.Cu)/100;
+  const massMg_final = massMg_bath + kgFeSiMg*getNum(fesimgA.Mg)/100;
+  const massBa_final = massBa_bath + kgInoc*getNum(inocA.Ba)/100;
+
+  // 4. Convert to Final %
+  const f_pC = tw_final > 0 ? (massC_final / tw_final * 100) : 0;
+  const f_pSi = tw_final > 0 ? (massSi_final / tw_final * 100) : 0;
+  const f_pMn = tw_final > 0 ? (massMn_final / tw_final * 100) : 0;
+  const f_pP = tw_final > 0 ? (massP_final / tw_final * 100) : 0;
+  const f_pMo = tw_final > 0 ? (massMo_final / tw_final * 100) : 0;
+  const f_pCu = tw_final > 0 ? (massCu_final / tw_final * 100) : 0;
+  const f_pMg = tw_final > 0 ? (massMg_final / tw_final * 100) : 0;
+  const f_pBa = tw_final > 0 ? (massBa_final / tw_final * 100) : 0;
+  const f_pCE = f_pC + (f_pSi/3) + (f_pP/3);
+
+  const aimCE = tC + (tSi/3) + (tP/3);
+
+  const nla=[
+    {el:"C", aim:tC, strAim:g.C, bath:b_pC, fin:f_pC},  
+    {el:"Si",aim:tSi, strAim:g.Si, bath:b_pSi, fin:f_pSi},
+    {el:"Mn",aim:tMn, strAim:g.Mn, bath:b_pMn, fin:f_pMn}, 
+    {el:"P", aim:tP,  strAim:g.P, bath:b_pP, fin:f_pP},
+    {el:"Mo",aim:tMo, strAim:g.Mo, bath:b_pMo, fin:f_pMo}, 
+    {el:"Cu",aim:tCu, strAim:g.Cu, bath:b_pCu, fin:f_pCu},
+    {el:"Mg",aim:tMg, strAim:g.Mg, bath:b_pMg, fin:f_pMg}, 
+    {el:"Ba",aim:tBa, strAim:g.Ba, bath:b_pBa, fin:f_pBa},
+    {el:"CE", aim:aimCE, strAim:aimCE, bath:b_pCE, fin:f_pCE, isCE:true}
+  ];
+
+  $("nlaBody").innerHTML = nla.map(r=>{
+    const baseTol = Math.max(r.aim * 0.05, 0.005);
+    const minAim = r.aim - baseTol;
+    const maxAim = r.aim + baseTol;
+    
+    let d = r.fin - r.aim;
+    let dc;
+
+    if (r.fin >= minAim && r.fin <= maxAim) {
+        dc = "diff-ok";
+    } else if (r.fin > maxAim) {
+        dc = "diff-bad";
+    } else {
+        dc = "diff-warn";
+    }
+
+    const rangeText = `${Math.max(0, minAim).toFixed(3)} - ${maxAim.toFixed(3)}`;
+    const rowClass = r.isCE ? "row-ce" : "";
+    
+    return `<tr class="${rowClass}">
+      <td style="text-align:center"><strong>${r.el}</strong></td>
+      <td style="text-align:center">${fmt(r.strAim, r.isCE ? 2 : 3)}</td>
+      <td style="text-align:center;font-size:0.75rem;color:var(--muted);">${rangeText}</td>
+      <td style="text-align:center;color:var(--muted);">${r.bath.toFixed(3)}</td>
+      <td style="text-align:center"><strong>${r.fin.toFixed(3)}</strong></td>
+      <td style="text-align:center" class="${dc}">${d>=0?"+":""}${d.toFixed(3)}</td>
+    </tr>`;
+  }).join("");
+
+  // ══ METRICS ══
+  const cpt = finalMeltWeight>0 ? (totalCost/finalMeltWeight)*1000 : 0;
+  $("metTotalCost").textContent  = "$"+totalCost.toFixed(2);
+  $("metCostTonne").textContent  = "$"+cpt.toFixed(0)+"/t";
+  $("metAlloysKg").textContent   = (alloySum + ladleSum).toFixed(1)+" kg";
+  $("metSteelKg").textContent    = kgSteel.toFixed(1)+" kg";
+
+  // Cache state for History Logging
+  lastCalcState = {
+     mode: mode,
+     grade: $("grade").value,
+     weight: finalMeltWeight,
+     cost: totalCost,
+     steel: kgSteel,
+     returns: rKg,
+     shov: shovKg,
+     fesi: kgFeSi,
+     graphite: kgGraph,
+     femn: kgFeMnHC,
+     cu: kgCu,
+     femo: kgFeMo,
+     fephos: kgFePhos,
+     fesimg: kgFeSiMg,
+     inoc: kgInoc
+  };
+
+  const iDose  = parseFloat($("inocDose") ? $("inocDose").value : 0.5)||0.5;
+  const fDose  = parseFloat($("fesimgDose") ? $("fesimgDose").value : 1.43)||1.43;
+  if($("practiceBox")){
+    $("practiceBox").innerHTML=
+      `<strong>For ${heat.toFixed(0)} kg furnace tap weight:</strong><br>
+      Inoculant @ ${iDose} kg/100kg → <strong>${(iDose/100*heat).toFixed(2)} kg</strong><br>
+      FeSiMg @ ${fDose} kg/100kg → <strong>${(fDose/100*heat).toFixed(2)} kg</strong>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  HISTORY LOGGING (localStorage)
+// ══════════════════════════════════════════════════════════
+function saveToHistory() {
+   let history = JSON.parse(localStorage.getItem('abm_history') || '[]');
+   const heatNo = $("heatNumber").value.trim() || "Un-numbered";
+   
+   history.unshift({
+       date: new Date().toLocaleString(),
+       heat: heatNo,
+       grade: lastCalcState.grade,
+       weight: lastCalcState.weight.toFixed(0),
+       cost: lastCalcState.cost.toFixed(2),
+       steel: lastCalcState.steel.toFixed(1),
+       returns: lastCalcState.returns.toFixed(1),
+       shov: lastCalcState.shov.toFixed(1),
+       fesi: lastCalcState.fesi.toFixed(2),
+       graphite: lastCalcState.graphite.toFixed(2),
+       femn: lastCalcState.femn.toFixed(2),
+       cu: lastCalcState.cu.toFixed(2),
+       femo: lastCalcState.femo.toFixed(2),
+       fephos: lastCalcState.fephos.toFixed(2),
+       fesimg: lastCalcState.fesimg.toFixed(2),
+       inoc: lastCalcState.inoc.toFixed(2)
+   });
+   
+   localStorage.setItem('abm_history', JSON.stringify(history));
+   buildHistoryTable();
+   
+   const btn = $('saveHistoryBtn');
+   const originalText = btn.innerHTML;
+   btn.innerHTML = '✅ Heat Saved to History!';
+   btn.classList.add('chip-ok');
+   setTimeout(() => { 
+       btn.innerHTML = originalText; 
+       btn.classList.remove('chip-ok'); 
+   }, 2500);
+}
+
+function buildHistoryTable() {
+   let history = JSON.parse(localStorage.getItem('abm_history') || '[]');
+   if(!history.length) {
+      $('historyBody').innerHTML = `<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--muted)">No heats logged yet. Calculate a heat and save it to begin building your history.</td></tr>`;
+      return;
+   }
+   
+   $('historyBody').innerHTML = history.map((h, i) => `
+     <tr>
+       <td style="font-size:0.75rem; color:var(--muted);">${h.date}</td>
+       <td><strong>${h.heat}</strong></td>
+       <td>${h.grade}</td>
+       <td>${h.weight}</td>
+       <td>$${h.cost}</td>
+       <td>${h.steel}</td>
+       <td>${h.returns}</td>
+       <td>${h.shov}</td>
+       <td>${h.fesi}</td>
+       <td>${h.graphite}</td>
+       <td>${h.femn}</td>
+       <td>${h.cu}</td>
+       <td>${h.femo}</td>
+       <td>${h.fephos}</td>
+       <td>${h.fesimg}</td>
+       <td>${h.inoc}</td>
+       <td><button class="btn" style="padding:4px 8px;font-size:0.7rem;color:var(--error);" onclick="deleteHistoryItem(${i})">Delete</button></td>
+     </tr>
+   `).join('');
+}
+
+function deleteHistoryItem(index) {
+   showModal("Are you sure you want to delete this log?", () => {
+       let history = JSON.parse(localStorage.getItem('abm_history') || '[]');
+       history.splice(index, 1);
+       localStorage.setItem('abm_history', JSON.stringify(history));
+       buildHistoryTable();
+   });
+}
+
+function clearHistory() {
+   showModal("Warning: This will permanently wipe all saved heat logs from this browser. Continue?", () => {
+       localStorage.removeItem('abm_history');
+       buildHistoryTable();
+   });
+}
+
+function exportHistoryExcel() {
+   let history = JSON.parse(localStorage.getItem('abm_history') || '[]');
+   if(!history.length) return showModal("No history to export.", null, true);
+   
+   let csv = "Iron Foundry - Melt History Log\n\n";
+   csv += "Date/Time,Heat Number,Grade,Kg Poured,Est. Cost ($),Steel Scrap (kg),Returns (kg),Shovelling (kg),FeSi (kg),Graphite (kg),FeMn HC (kg),Cu Metal (kg),FeMo (kg),FePhos (kg),FeSiMg (kg),Inoculant (kg)\n";
+   
+   history.forEach(h => {
+       csv += `"${h.date}","${h.heat}","${h.grade}","${h.weight}","${h.cost}","${h.steel}","${h.returns}","${h.shov}","${h.fesi}","${h.graphite}","${h.femn}","${h.cu}","${h.femo}","${h.fephos}","${h.fesimg}","${h.inoc}"\n`;
+   });
+   
+   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+   const link = document.createElement("a");
+   link.href = URL.createObjectURL(blob);
+   link.download = `Melt_History_Log_${new Date().toISOString().slice(0,10)}.csv`;
+   document.body.appendChild(link);
+   link.click();
+   document.body.removeChild(link);
+}
+
+// ══════════════════════════════════════════════════════════
+//  ALLOY LIBRARY
+// ══════════════════════════════════════════════════════════
+function buildAlloysTable(){
+  if(!$("alloysBody")) return;
+  $("alloysBody").innerHTML = ALLOYS.map((a,i)=>`<tr>
+    <td><input type="text" value="${a.name}" data-i="${i}" data-f="name" oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.01"  value="${a.price}" data-i="${i}" data-f="price" oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.01"  value="${a.C}"     data-i="${i}" data-f="C"     oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.01"  value="${a.Si}"    data-i="${i}" data-f="Si"    oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.01"  value="${a.Mn}"    data-i="${i}" data-f="Mn"    oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.001" value="${a.P}"     data-i="${i}" data-f="P"     oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.01"  value="${a.Mo}"    data-i="${i}" data-f="Mo"    oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.01"  value="${a.Cu}"    data-i="${i}" data-f="Cu"    oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.001" value="${a.Mg}"    data-i="${i}" data-f="Mg"    oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.0001"value="${a.Ba}"    data-i="${i}" data-f="Ba"    oninput="updateAlloy(this)"/></td>
+    <td><input type="number" step="0.01"  value="${a.Fe}"    data-i="${i}" data-f="Fe"    oninput="updateAlloy(this)"/></td>
+    <td><input type="text" value="${a.notes}" data-i="${i}" data-f="notes" oninput="updateAlloy(this)"/></td>
+  </tr>`).join("");
+}
+
+function updateAlloy(el){
+  let val = el.dataset.f === "name" || el.dataset.f === "notes" ? el.value : parseFloat(el.value)||0;
+  ALLOYS[parseInt(el.dataset.i)][el.dataset.f] = val;
+  recalc();
+}
+
+function addNewAlloy(){
+  ALLOYS.push({id:"Custom"+ALLOYS.length, name:"New Alloy", price:0, C:0, Si:0, Mn:0, P:0, Mo:0, Cu:0, Mg:0, Ba:0, Fe:0, notes:""});
+  buildAlloysTable();
+}
+
+function resetAlloys(){
+  ALLOYS = JSON.parse(JSON.stringify(DEFAULT_ALLOYS));
+  buildAlloysTable();
+  recalc();
+}
+
+// ══════════════════════════════════════════════════════════
+//  GRADE TABLE
+// ══════════════════════════════════════════════════════════
+function buildGradeTable(){
+  if(!$("gradeBody")) return;
+  $("gradeBody").innerHTML = GRADES.map((g,i)=>`
+    <tr>
+      <td><input type="text" value="${g.name}" data-i="${i}" data-f="name" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.CE}" data-i="${i}" data-f="CE" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.C}" data-i="${i}" data-f="C" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.Si}" data-i="${i}" data-f="Si" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.Mn}" data-i="${i}" data-f="Mn" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.P}" data-i="${i}" data-f="P" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.Mo}" data-i="${i}" data-f="Mo" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.Cu}" data-i="${i}" data-f="Cu" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.Mg}" data-i="${i}" data-f="Mg" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.Ba}" data-i="${i}" data-f="Ba" oninput="updateGrade(this)"/></td>
+      <td><input type="text" value="${g.notes}" data-i="${i}" data-f="notes" oninput="updateGrade(this)"/></td>
+      <td><button class="btn" onclick="selectGradeFromLib('${g.name}')">Load</button></td>
+    </tr>`).join("");
+}
+
+function updateGrade(el){
+  let val = el.value;
+  GRADES[parseInt(el.dataset.i)][el.dataset.f] = val;
+  updateGradeSelects();
+  recalc();
+}
+
+function addNewGrade(){
+  GRADES.push({name:"New Grade", CE:4.30, C:3.50, Si:2.00, Mn:"0.50*", P:"0.02*", Mo:"0.10*", Cu:"0.10*", Mg:0, Ba:0, notes:""});
+  buildGradeTable();
+  updateGradeSelects();
+}
+
+function selectGradeFromLib(name){
+  $('grade').value = name;
+  showTab('dashboard',$('tab-dashboard'));
+  loadGrade(name);
+}
+
+// ══════════════════════════════════════════════════════════
+//  EXPORT TO EXCEL (CSV)
+// ══════════════════════════════════════════════════════════
+function exportExcel(){
+  let csv = "Iron Foundry Charge Report\n\n";
+  
+  csv += `Date,${new Date().toLocaleDateString()}\n`;
+  csv += `Heat Number,${$("heatNumber").value || "N/A"}\n`;
+  csv += `Mode,${mode}\n`;
+  csv += `Target Grade,${$("grade").value}\n`;
+  csv += `Target Heat Weight (kg),${num("heatWeight")}\n`;
+  
+  if(mode === "TRIM"){
+    csv += `Actual Bath Weight (kg),${num("bathWeight")}\n`;
+  } else {
+    if(num("returnKg") > 0 || ($("returnKg2") && num("returnKg2") > 0)) {
+      csv += `Primary Returns Grade,${$("returnGrade").value}\n`;
+      csv += `Primary Returns Weight (kg),${num("returnKg")}\n`;
+      if($("returnKg2") && num("returnKg2") > 0) {
+        csv += `Secondary Returns Grade,${$("returnGrade2").value}\n`;
+        csv += `Secondary Returns Weight (kg),${num("returnKg2")}\n`;
+      }
+    }
+  }
+  csv += "\n";
+
+  csv += "RECOMMENDED ADDITIONS\n";
+  csv += "Material,Add (kg),Cost ($),When,Notes\n";
+  
+  const addRows = document.querySelectorAll("#addBody tr, #addFoot tr");
+  addRows.forEach(r => {
+    if(r.classList.contains('section-row') || r.classList.contains('section-row-ladle')) {
+      csv += `\n--- ${r.innerText.trim()} ---\n`;
+      return;
+    }
+    let cols = r.querySelectorAll("td");
+    if(cols.length < 4) return; 
+
+    let mat = cols[0].innerText.trim();
+    let kgInput = cols[1].querySelector("input");
+    let kg = kgInput ? kgInput.value : cols[1].innerText.trim();
+    if(kg === "") kg = kgInput.placeholder || "0.00";
+
+    let cost = cols[3].innerText.trim();
+    let when = cols[4] ? cols[4].innerText.trim() : "";
+    let note = cols[5] ? cols[5].innerText.trim() : "";
+
+    csv += `"${mat}","${kg}","${cost}","${when}","${note}"\n`;
+  });
+  csv += "\n";
+
+  csv += "NO LOSS ANALYSIS\n";
+  csv += "Element,Aim Target,Acceptable Range,Bath %,Final %,Diff\n";
+  
+  const nlaRows = document.querySelectorAll("#nlaBody tr");
+  nlaRows.forEach(r => {
+    let cols = r.querySelectorAll("td");
+    if(cols.length < 6) return;
+    csv += `"${cols[0].innerText.trim()}","${cols[1].innerText.trim()}","${cols[2].innerText.trim()}","${cols[3].innerText.trim()}","${cols[4].innerText.trim()}","${cols[5].innerText.trim()}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `Charge_Report_${$("grade").value}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+updateGradeSelects();
+buildGradeTable();
+buildHistoryTable();
+updateGradeTargetBox(GRADES[0].name);
+updateModeUI();
+recalc();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(registration => {
+          console.log('Service Worker registered successfully');
+        })
+        .catch(err => {
+          console.log('Service Worker registration failed: ', err);
+        });
+    });
+  }
+</script>
+</body>
+</html>
