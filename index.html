@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Iron Foundry Charge Calculator</title>
-  <link rel="icon" type="image/png" href="192.png" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
 <style>
 :root{
   --bg:#f2f0eb;--surface:#fff;--surface2:#f7f6f3;--border:#d8d4cc;
@@ -662,7 +662,7 @@ function recalc(){
     
     $("combinedReturnsBox").innerHTML = `C: <b>${rC.toFixed(2)}%</b> | Si: <b>${rSi.toFixed(2)}%</b> | Mn: <b>${rMn.toFixed(2)}%</b><br>P: <b>${rP.toFixed(3)}%</b> | Mo: <b>${rMo.toFixed(3)}%</b> | Cu: <b>${rCu.toFixed(3)}%</b><br>S: <b>${rS.toFixed(3)}%</b> | Cr: <b>${rCr.toFixed(3)}%</b>`;
     
-    bC=steelA.C; bSi=steelA.Si; bMn=steelA.Mn; bP=steelA.P; bMo=steelA.Mo; bCu=steelA.Cu; bS=steelA.S; bCr=steelA.Cr;
+    bC=getNum(steelA.C); bSi=getNum(steelA.Si); bMn=getNum(steelA.Mn); bP=getNum(steelA.P); bMo=getNum(steelA.Mo); bCu=getNum(steelA.Cu); bS=getNum(steelA.S); bCr=getNum(steelA.Cr);
   }
 
   // Ladle Additions
@@ -700,7 +700,7 @@ function recalc(){
 
   const alloySum = kgFeSi + kgGraph + kgFeMnHC + kgCu + kgFeMo + kgFePhos + shovKg;
   const ladleSum = kgFeSiMg + kgInoc;
-  const kgSteel = steelOverride !== null ? steelOverride : Math.max(heat - alloySum - rKg, 0); 
+  const kgSteel = trim ? 0 : (steelOverride !== null ? steelOverride : Math.max(heat - alloySum - rKg, 0)); 
   const finalMass = trim ? (heat + alloySum + ladleSum) : (kgSteel + rKg + alloySum + ladleSum);
 
   // Render Table
@@ -724,15 +724,17 @@ function recalc(){
 
   addHtml += `<tr class="section-row"><td colspan="6">Furnace Additions</td></tr>`;
   
-  const steelNote = steelOverride!==null ? `Manual override — calc req: ${Math.max(heat-alloySum-rKg,0).toFixed(1)} kg` : `Fills balance of furnace tap weight (${heat} kg)`;
-  const steelPrice = getNum(steelA.price);
-  const steelCost = kgSteel * steelPrice;
-  totalCost += steelCost;
-  addHtml += `<tr><td class="mat-name"><strong>Steel Scrap</strong></td><td style="text-align:right"><input class="steel-override ${steelOverride!==null?'overridden':''}" type="number" min="0" step="1" value="${kgSteel.toFixed(2)}" placeholder="auto" oninput="steelOverride=this.value===''?null:(parseFloat(this.value)||0);this.className='steel-override'+(steelOverride!==null?' overridden':'');recalc()"/></td><td style="text-align:right">$${steelPrice.toFixed(2)}</td><td style="text-align:right"><strong class="cost-val">$${steelCost.toFixed(2)}</strong></td><td style="text-align:center"><span class="when-badge when-furnace">Furnace</span></td><td class="note-txt">${steelNote}</td></tr>`;
+  if (!trim) {
+      const steelNote = steelOverride!==null ? `Manual override — calc req: ${Math.max(heat-alloySum-rKg,0).toFixed(1)} kg` : `Fills balance of furnace tap weight (${heat} kg)`;
+      const steelPrice = getNum(steelA.price);
+      const steelCost = kgSteel * steelPrice;
+      totalCost += steelCost;
+      addHtml += `<tr><td class="mat-name"><strong>Steel Scrap</strong></td><td style="text-align:right"><input class="steel-override ${steelOverride!==null?'overridden':''}" type="number" min="0" step="1" value="${kgSteel.toFixed(2)}" placeholder="auto" oninput="steelOverride=this.value===''?null:(parseFloat(this.value)||0);this.className='steel-override'+(steelOverride!==null?' overridden':'');recalc()"/></td><td style="text-align:right">$${steelPrice.toFixed(2)}</td><td style="text-align:right"><strong class="cost-val">$${steelCost.toFixed(2)}</strong></td><td style="text-align:center"><span class="when-badge when-furnace">Furnace</span></td><td class="note-txt">${steelNote}</td></tr>`;
 
-  if(!trim && rKg>0) {
-    if(num("returnKg")>0) makeAddRow("R1", $("returnGrade").value==="Custom"?"Returns 1":`Returns (${$("returnGrade").value})`, num("returnKg"), 0, "Furnace", "Recycled", false, true, false);
-    if($("returnKg2") && num("returnKg2")>0) makeAddRow("R2", $("returnGrade2").value==="Custom"?"Returns 2":`Returns (${$("returnGrade2").value})`, num("returnKg2"), 0, "Furnace", "Recycled", false, true, false);
+      if(rKg>0) {
+        if(num("returnKg")>0) makeAddRow("R1", $("returnGrade").value==="Custom"?"Returns 1":`Returns (${$("returnGrade").value})`, num("returnKg"), 0, "Furnace", "Recycled", false, true, false);
+        if($("returnKg2") && num("returnKg2")>0) makeAddRow("R2", $("returnGrade2").value==="Custom"?"Returns 2":`Returns (${$("returnGrade2").value})`, num("returnKg2"), 0, "Furnace", "Recycled", false, true, false);
+      }
   }
 
   const E35 = tSi - (kgFeSiMg*getNum(fesimgA.Si)/100 + kgInoc*getNum(inocA.Si)/100)/heat*100;
@@ -756,37 +758,51 @@ function recalc(){
   $("addFoot").innerHTML = `<tr class="total-row"><td><strong>TOTAL</strong></td><td style="text-align:right"><strong>${finalMass.toFixed(2)} kg</strong></td><td></td><td style="text-align:right"><span class="total-cost">$${totalCost.toFixed(2)}</span></td><td colspan="2"></td></tr>`;
 
   // ══ NO LOSS ANALYSIS (NLA) ══
-  const massC_bath = (trim?heat*bC/100:kgSteel*bC/100+rKg*rC/100) + kgGraph*getNum(graphA.C)/100 + kgFeMnHC*getNum(femhcA.C)/100 + shovKg*getNum(shovA.C)/100 + kgFePhos*getNum(fephA.C)/100;
-  const massSi_bath = (trim?heat*bSi/100:kgSteel*bSi/100+rKg*rSi/100) + kgFeSi*getNum(fesiA.Si)/100 + kgFeMnHC*getNum(femhcA.Si)/100 + shovKg*getNum(shovA.Si)/100;
-  const massMn_bath = (trim?heat*bMn/100:kgSteel*bMn/100+rKg*rMn/100) + kgFeMnHC*getNum(femhcA.Mn)/100 + shovKg*getNum(shovA.Mn)/100 + kgFePhos*getNum(fephA.Mn)/100;
-  const massP_bath = (trim?heat*bP/100:kgSteel*bP/100+rKg*rP/100) + kgFePhos*getNum(fephA.P)/100 + shovKg*getNum(shovA.P)/100 + kgFeMnHC*getNum(femhcA.P)/100;
-  const massMo_bath = (trim?heat*bMo/100:kgSteel*bMo/100+rKg*rMo/100) + kgFeMo*getNum(femoA.Mo)/100 + shovKg*getNum(shovA.Mo)/100;
-  const massCu_bath = (trim?heat*bCu/100:kgSteel*bCu/100+rKg*rCu/100) + kgCu*getNum(cuA.Cu)/100 + shovKg*getNum(shovA.Cu)/100;
-  const massMg_bath = trim?heat*bMg/100:0;
-  const massBa_bath = trim?heat*bBa/100:0;
-  const massS_bath = (trim?heat*bS/100:kgSteel*bS/100+rKg*rS/100) + kgGraph*getNum(graphA.S)/100 + kgFeMnHC*getNum(femhcA.S)/100 + kgFeSi*getNum(fesiA.S)/100 + shovKg*getNum(shovA.S)/100 + kgFePhos*getNum(fephA.S)/100 + kgFeMo*getNum(femoA.S)/100 + kgCu*getNum(cuA.S)/100;
-  const massCr_bath = (trim?heat*bCr/100:kgSteel*bCr/100+rKg*rCr/100) + kgFeMnHC*getNum(femhcA.Cr)/100 + kgFeSi*getNum(fesiA.Cr)/100 + shovKg*getNum(shovA.Cr)/100;
+  function calcMass(elKey, bVal, rVal) {
+      let mass = 0;
+      if (trim) {
+          mass += heat * bVal / 100;
+      } else {
+          mass += kgSteel * getNum(steelA[elKey]) / 100;
+          mass += rKg * rVal / 100;
+      }
+      mass += kgGraph * getNum(graphA[elKey]) / 100;
+      mass += kgFeMnHC * getNum(femhcA[elKey]) / 100;
+      mass += kgFeSi * getNum(fesiA[elKey]) / 100;
+      mass += kgCu * getNum(cuA[elKey]) / 100;
+      mass += kgFeMo * getNum(femoA[elKey]) / 100;
+      mass += kgFePhos * getNum(fephA[elKey]) / 100;
+      mass += shovKg * getNum(shovA[elKey]) / 100;
+      return mass;
+  }
+  function calcLadleMass(elKey) {
+      return kgFeSiMg * getNum(fesimgA[elKey]) / 100 + kgInoc * getNum(inocA[elKey]) / 100;
+  }
 
   const tw_bath = finalMass - ladleSum;
-  const b_pC=tw_bath>0?massC_bath/tw_bath*100:0, b_pSi=tw_bath>0?massSi_bath/tw_bath*100:0, b_pMn=tw_bath>0?massMn_bath/tw_bath*100:0;
-  const b_pP=tw_bath>0?massP_bath/tw_bath*100:0, b_pMo=tw_bath>0?massMo_bath/tw_bath*100:0, b_pCu=tw_bath>0?massCu_bath/tw_bath*100:0;
-  const b_pS=tw_bath>0?massS_bath/tw_bath*100:0, b_pCr=tw_bath>0?massCr_bath/tw_bath*100:0;
-
-  const elements = [
-    {el:"C", aim:tC, strAim:g.C, bath:b_pC, fin:(massC_bath+kgFeSiMg*getNum(fesimgA.C)/100+kgInoc*getNum(inocA.C)/100)/finalMass*100},
-    {el:"Si",aim:tSi, strAim:g.Si, bath:b_pSi, fin:(massSi_bath+kgFeSiMg*getNum(fesimgA.Si)/100+kgInoc*getNum(inocA.Si)/100)/finalMass*100},
-    {el:"Mn",aim:tMn, strAim:g.Mn, bath:b_pMn, fin:(massMn_bath+kgFeSiMg*getNum(fesimgA.Mn)/100+kgInoc*getNum(inocA.Mn)/100)/finalMass*100},
-    {el:"P", aim:tP,  strAim:g.P, bath:b_pP, fin:(massP_bath+kgFeSiMg*getNum(fesimgA.P)/100+kgInoc*getNum(inocA.P)/100)/finalMass*100},
-    {el:"Mo",aim:tMo, strAim:g.Mo, bath:b_pMo, fin:(massMo_bath+kgFeSiMg*getNum(fesimgA.Mo)/100+kgInoc*getNum(inocA.Mo)/100)/finalMass*100},
-    {el:"Cu",aim:tCu, strAim:g.Cu, bath:b_pCu, fin:(massCu_bath+kgFeSiMg*getNum(fesimgA.Cu)/100+kgInoc*getNum(inocA.Cu)/100)/finalMass*100},
-    {el:"Mg",aim:tMg, strAim:g.Mg, bath:massMg_bath/tw_bath*100, fin:(massMg_bath+kgFeSiMg*getNum(fesimgA.Mg)/100)/finalMass*100},
-    {el:"Ba",aim:tBa, strAim:g.Ba, bath:massBa_bath/tw_bath*100, fin:(massBa_bath+kgInoc*getNum(inocA.Ba)/100)/finalMass*100},
-    {el:"S", aim:tS, strAim:g.S, bath:b_pS, fin:(massS_bath+kgFeSiMg*getNum(fesimgA.S)/100+kgInoc*getNum(inocA.S)/100)/finalMass*100},
-    {el:"Cr",aim:tCr, strAim:g.Cr, bath:b_pCr, fin:(massCr_bath+kgFeSiMg*getNum(fesimgA.Cr)/100+kgInoc*getNum(inocA.Cr)/100)/finalMass*100}
+  const elementsData = [
+    {el:"C", aim:tC, strAim:g.C, bVal:bC, rVal:rC},
+    {el:"Si", aim:tSi, strAim:g.Si, bVal:bSi, rVal:rSi},
+    {el:"Mn", aim:tMn, strAim:g.Mn, bVal:bMn, rVal:rMn},
+    {el:"P", aim:tP, strAim:g.P, bVal:bP, rVal:rP},
+    {el:"Mo", aim:tMo, strAim:g.Mo, bVal:bMo, rVal:rMo},
+    {el:"Cu", aim:tCu, strAim:g.Cu, bVal:bCu, rVal:rCu},
+    {el:"Mg", aim:tMg, strAim:g.Mg, bVal:bMg, rVal:0},
+    {el:"Ba", aim:tBa, strAim:g.Ba, bVal:bBa, rVal:0},
+    {el:"S", aim:tS, strAim:g.S, bVal:bS, rVal:rS},
+    {el:"Cr", aim:tCr, strAim:g.Cr, bVal:bCr, rVal:rCr}
   ];
+
+  const elements = elementsData.map(e => {
+    let mBath = calcMass(e.el, e.bVal, e.rVal);
+    let mLadle = calcLadleMass(e.el);
+    let pBath = tw_bath > 0 ? (mBath / tw_bath * 100) : 0;
+    let pFin = finalMass > 0 ? ((mBath + mLadle) / finalMass * 100) : 0;
+    return { el: e.el, aim: e.aim, strAim: e.strAim, bath: pBath, fin: pFin };
+  });
   
   const f_CE = elements[0].fin + elements[1].fin/3 + elements[3].fin/3;
-  const b_CE = b_pC + b_pSi/3 + b_pP/3;
+  const b_CE = elements[0].bath + elements[1].bath/3 + elements[3].bath/3;
   elements.push({el:"CE", aim: tC+tSi/3+tP/3, strAim: tC+tSi/3+tP/3, bath:b_CE, fin:f_CE, isCE:true});
 
   $("nlaBody").innerHTML = elements.map(r=>{
@@ -818,7 +834,7 @@ function recalc(){
 
   $("metTotalCost").textContent = "$"+totalCost.toFixed(2);
   $("metCostTonne").textContent = "$"+(totalCost/(finalMass/1000)).toFixed(0);
-  $("metAlloysKg").textContent = (calcFeMnHC+calcFeSi+calcGraph+calcFeMo+calcCu+calcFePhos).toFixed(1)+" kg";
+  $("metAlloysKg").textContent = (kgFeMnHC+kgFeSi+kgGraph+kgFeMo+kgCu+kgFePhos).toFixed(1)+" kg";
   $("metSteelKg").textContent = kgSteel.toFixed(0)+" kg";
   
   lastCalcState = {
